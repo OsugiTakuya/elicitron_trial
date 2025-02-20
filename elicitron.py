@@ -25,7 +25,7 @@ DOC_GEN_HUMAN_POSTFIX_MSG = (
     "5. ターゲットユーザー\n"
     "6. 優先順位\n"
     "7. リスクと軽減策\n\n"
-    "出力は必ず日本語でお願いします。\n\n要件文書:"
+    "出力は必ず日本語で、markdown形式でお願いします。\n\n要件文書:"
 )
 
 
@@ -78,6 +78,7 @@ class InterviewState(BaseModel):
     is_information_sufficient: bool = Field(
         default=False, description="情報が十分かどうか"
     )
+    logpath: str = Field(default="", description="ログファイルのパス。txt形式")
 
 
 # ペルソナを生成するクラス
@@ -379,13 +380,25 @@ class DocumentationAgent:
         )
         return {"requirements_doc": requirements_doc}
 
-    def run(self, user_request: str) -> str:
+    def run(self, user_request: str, logpath: str = "") -> str:
+        # ログ
+        if len(logpath) != 0:
+            with open(logpath, "w") as f:
+                f.write(f"----------エージェントへの要求----------\n{user_request}")
+
         # 初期状態の設定
-        initial_state = InterviewState(user_request=user_request)
+        initial_state = InterviewState(user_request=user_request, logpath=logpath)
         # グラフの実行
         final_state = self.graph.invoke(initial_state)
         # 最終的な要件定義書の取得
-        return final_state["requirements_doc"]
+        doc = final_state["requirements_doc"]
+
+        # ログ
+        if len(logpath) != 0:
+            with open(logpath, "a") as f:
+                f.write(f"\n\n----------エージェントが生成した文書----------\n{doc}")
+
+        return doc
 
 
 # 実行方法:
